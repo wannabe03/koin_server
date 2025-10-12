@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  KoinServer_postgres:
+    image: postgres:16.1
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: Koin
+    ports:
+      - "55432:5432"   # 호스트 포트 55432 → 컨테이너 내부 5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  app:
+    build: .
+    container_name: app-koinServer
+    depends_on:
+      - KoinServer_postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://KoinServer_postgres:5432/Koin
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: yourpassword
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:

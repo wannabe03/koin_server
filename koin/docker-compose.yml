@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  flutter:
+    build: .
+    container_name: koin_flutter
+    ports:
+      - "5174:5174"             # 브라우저: http://localhost:5173
+    volumes:
+      - .:/app                  # 로컬 코드 ↔ 컨테이너 동기화
+      - flutter_pub_cache:/root/.pub-cache
+      - flutter_build:/app/build
+    environment:
+      - TZ=Asia/Seoul
+      # (선택) Web 디바이스가 chrome 필요할 때 사용
+      - CHROME_EXECUTABLE=/usr/bin/google-chrome
+    tty: true
+    stdin_open: true
+
+volumes:
+  flutter_pub_cache:
+  flutter_build:
