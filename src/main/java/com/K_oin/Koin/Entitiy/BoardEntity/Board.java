@@ -18,14 +18,16 @@ import java.util.Set;
         name = "Koin_BoardTable",
         indexes = {
                 @Index(name = "idx_board_type", columnList = "boardType"),
-                @Index(name = "idx_board_author_id", columnList = "user_id")
+                @Index(name = "idx_board_author_id", columnList = "user_id"),
+                @Index(name = "idx_board_created_at", columnList = "createdAt DESC")
         }
 )
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(exclude = {"comments", "likes"})
+@EqualsAndHashCode(of = "boardId")  // ID만 비교
+@ToString(exclude = {"author", "comments", "likes"}) // 순환 참조 방지
 public class Board {
 
     @Id

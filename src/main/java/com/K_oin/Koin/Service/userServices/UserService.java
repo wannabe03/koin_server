@@ -1,10 +1,13 @@
 package com.K_oin.Koin.Service.userServices;
 
+import com.K_oin.Koin.DTO.boardDTOs.BoardSummaryDTO;
 import com.K_oin.Koin.DTO.userDTOs.UserDTO;
 import com.K_oin.Koin.DTO.userDTOs.UserUpdateProfileDTO;
+import com.K_oin.Koin.Entitiy.BoardEntity.Board;
 import com.K_oin.Koin.Entitiy.UserEntity.User;
 import com.K_oin.Koin.EnumData.Nationality;
 import com.K_oin.Koin.EnumData.Role;
+import com.K_oin.Koin.Repository.boardRepository.BoardRepository;
 import com.K_oin.Koin.Repository.userRepository.UserRepository;
 import com.K_oin.Koin.Security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -21,6 +25,8 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final BoardRepository boardRepository;
+
     private final PasswordEncoder passwordEncoder;
 
     public User registerUser(UserDTO userDTO) {
@@ -135,5 +141,47 @@ public class UserService {
 
         userRepository.save(user);
         log.info("프로필 수정 성공 - username: {}", name);
+    }
+
+    public List<BoardSummaryDTO> getMyCommentBoard(String userName) {
+        var user = userRepository.findByUsername(userName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userName));
+
+        List<Board> boards = Optional.ofNullable(boardRepository.findDistinctBoardsByMyCommentUserId(user.getId()))
+                .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다: " + user.getUsername()));
+
+        return boards.stream()
+                .map(board -> BoardSummaryDTO.builder()
+                        .boardId(board.getBoardId())
+                        .title(board.getTitle())
+                        .preview(board.getBody().length() > 100
+                                ? board.getBody().substring(0, 100) + "..."
+                                : board.getBody())
+                        .likeCount(board.getLikes().size())
+                        .commentCount(board.getComments().size())
+                        .createdAt(board.getCreatedAt())
+                        .build()
+                ).toList();
+    }
+
+    public List<BoardSummaryDTO> getMyLikesBoard(String userName) {
+        var user = userRepository.findByUsername(userName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userName));
+
+        List<Board> boards = Optional.ofNullable(boardRepository.findDistinctBoardsByMyLikeUserId(user.getId()))
+                .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다: " + user.getUsername()));
+
+        return boards.stream()
+                .map(board -> BoardSummaryDTO.builder()
+                        .boardId(board.getBoardId())
+                        .title(board.getTitle())
+                        .preview(board.getBody().length() > 100
+                                ? board.getBody().substring(0, 100) + "..."
+                                : board.getBody())
+                        .likeCount(board.getLikes().size())
+                        .commentCount(board.getComments().size())
+                        .createdAt(board.getCreatedAt())
+                        .build()
+                ).toList();
     }
 }

@@ -19,6 +19,11 @@ import java.time.LocalDateTime;
                         name = "uk_koin_board_comment_like_board_user",
                         columnNames = {"comment_id", "user_id"}
                 )
+        },
+        indexes = {
+                @Index(name = "idx_koin_board_comment_like_comment_id", columnList = "comment_id"),
+                @Index(name = "idx_koin_board_comment_like_user_id", columnList = "user_id"),
+                @Index(name = "idx_koin_board_comment_like_created_at", columnList = "createdAt")
         }
 ) // 중복 좋아요 방지를 위한 유니크 제약조건
 @Data

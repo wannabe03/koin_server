@@ -1,6 +1,7 @@
 package com.K_oin.Koin.Controller;
 
 import com.K_oin.Koin.DTO.ApiResponse;
+import com.K_oin.Koin.DTO.boardDTOs.BoardSummaryDTO;
 import com.K_oin.Koin.DTO.userDTOs.UserChangePassWordDTO;
 import com.K_oin.Koin.DTO.userDTOs.UserDTO;
 import com.K_oin.Koin.DTO.userDTOs.UserUpdateProfileDTO;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -50,6 +52,38 @@ public class UserController {
                         .body((UserDTO) Map.of(
                                 "success", false,
                                 "message", "user가 존재하지 않는 토큰입니다")));
+    }
+
+    @GetMapping("/MyCommentBoards")
+    public ResponseEntity<ApiResponse<List<BoardSummaryDTO>>> getMyComments(
+            @Parameter(description = "Spring Security 인증 객체", hidden = true)
+            Authentication authentication)
+    {
+        List<BoardSummaryDTO> boards;
+        try {
+            boards = userService.getMyCommentBoard(authentication.getName());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        }
+
+        return ResponseEntity.ok(new ApiResponse<>(true, boards, "내가 작성한 댓글 게시판 조회 성공"));
+    }
+
+    @GetMapping("/MyLikesBoards")
+    public ResponseEntity<ApiResponse<List<BoardSummaryDTO>>> getMyLikes(
+            @Parameter(description = "Spring Security 인증 객체", hidden = true)
+            Authentication authentication)
+    {
+        List<BoardSummaryDTO> boards;
+        try {
+            boards = userService.getMyLikesBoard(authentication.getName());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        }
+
+        return ResponseEntity.ok(new ApiResponse<>(true, boards, "내가 좋아요 한 게시판 조회 성공"));
     }
 
     @PostMapping("/ChangePassword")

@@ -13,7 +13,14 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "Koin_BoardCommentTable")
+@Table(
+        name = "Koin_BoardCommentTable",
+        indexes = {
+                @Index(name = "idx_board_comment_board_id", columnList = "board_id"),
+                @Index(name = "idx_board_comment_created_at", columnList = "createdAt"),
+                @Index(name = "idx_board_comment_user_id", columnList = "user_id")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
