@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -15,4 +16,6 @@ public class CommentDetailDTO {
     private boolean anonymous;
     private String body;
     private int likeCount;
+    private boolean isMine;
+    private List<ReplyCommentDetailDTO> replies;
 }

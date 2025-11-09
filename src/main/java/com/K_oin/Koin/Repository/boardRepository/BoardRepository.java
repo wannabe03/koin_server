@@ -29,7 +29,16 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     @EntityGraph(attributePaths = {"author", "likes", "comments"})
     Page<Board> findAllByBoardTypeOrderByLikesDesc(BoardType boardType, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"author", "likes", "comments", "comments.author"})
+    @EntityGraph(attributePaths = {
+            "author",
+            "likes",
+            "comments",
+            "comments.author",
+            "comments.likes",
+            "comments.replies",
+            "comments.replies.author",
+            "comments.replies.likes"
+    })
     Optional<Board> findByBoardTypeAndBoardId(BoardType boardType, Long boardId);
 
     @Query(value = """

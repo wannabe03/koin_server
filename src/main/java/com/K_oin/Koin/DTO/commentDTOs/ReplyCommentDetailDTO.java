@@ -16,4 +16,5 @@ public class ReplyCommentDetailDTO {
     private boolean anonymous;
     private String body;
     private int likeCount;
+    private boolean isMine;
 }

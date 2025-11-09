@@ -74,12 +74,17 @@ public class BoardController {
     }
 
     @GetMapping("/{boardType}/{boardId}")
-    public ResponseEntity<ApiResponse<BoardDetailDTO>> getBoardType(@PathVariable String boardType, @PathVariable Long boardId) {
+    public ResponseEntity<ApiResponse<BoardDetailDTO>> getBoardType(@PathVariable String boardType, @PathVariable Long boardId, Authentication authentication) {
 
         BoardDetailDTO boardDetailDTO;
 
         try {
-            boardDetailDTO = boardService.getBoardDetail(boardType, boardId);
+            String currentUserId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                currentUserId = authentication.getName();
+            }
+
+            boardDetailDTO = boardService.getBoardDetail(boardType, boardId, currentUserId);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, null, "게시판 유형 조회 실패: " + e.getMessage()));

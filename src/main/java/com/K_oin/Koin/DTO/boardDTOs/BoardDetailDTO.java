@@ -20,4 +20,5 @@ public class BoardDetailDTO {
     private int commentCount;     // 댓글 수
     private BoardAuthorDTO boardAuthorDTO;
     private List<CommentDetailDTO> comments; // 댓글 목록
+    private boolean isMine;         // 내가 쓴 글인지 여부
 }

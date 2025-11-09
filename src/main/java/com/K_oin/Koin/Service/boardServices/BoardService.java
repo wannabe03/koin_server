@@ -4,6 +4,7 @@ import com.K_oin.Koin.DTO.boardDTOs.BoardDTO;
 import com.K_oin.Koin.DTO.boardDTOs.BoardDetailDTO;
 import com.K_oin.Koin.DTO.boardDTOs.BoardSummaryDTO;
 import com.K_oin.Koin.DTO.commentDTOs.CommentDetailDTO;
+import com.K_oin.Koin.DTO.commentDTOs.ReplyCommentDetailDTO;
 import com.K_oin.Koin.DTO.userDTOs.BoardAuthorDTO;
 import com.K_oin.Koin.Entitiy.BoardEntity.Board;
 import com.K_oin.Koin.Entitiy.BoardEntity.Likes.BoardLike;
@@ -101,7 +102,7 @@ public class BoardService {
         }
     }
 
-    public BoardDetailDTO getBoardDetail(String boardType, Long boardId) {
+    public BoardDetailDTO getBoardDetail(String boardType, Long boardId, String userName) {
 
         BoardType type = BoardType.valueOf(boardType.toUpperCase());
 
@@ -117,6 +118,11 @@ public class BoardService {
                     .build();
         }
 
+        boolean isMyBoard = false;
+        if (userName != null && board.getAuthor() != null) {
+            isMyBoard = board.getAuthor().getUsername().equals(userName);
+        }
+
         return BoardDetailDTO.builder()
                 .boardId(board.getBoardId())
                 .title(board.getTitle())
@@ -125,6 +131,7 @@ public class BoardService {
                 .createdAt(board.getCreatedAt())
                 .likeCount(board.getLikes().size())
                 .anonymous(board.isAnonymous())
+                .isMine(isMyBoard)
                 .commentCount(board.getComments().size())
                 .comments(board.getComments().stream()
                         .map(comment -> {
@@ -138,13 +145,48 @@ public class BoardService {
                                         .build();
                             }
 
+                            boolean isMyComment = false;
+                            if (userName != null && comment.getAuthor() != null) {
+                                isMyComment = comment.getAuthor().getUsername().equals(userName);
+                            }
+
+                            List<ReplyCommentDetailDTO> repliesDTO = comment.getReplies().stream()
+                                    .map(reply -> {
+                                        BoardAuthorDTO replyAuthorDTO = null;
+                                        if (!reply.isAnonymous() && reply.getAuthor() != null) {
+                                            replyAuthorDTO = BoardAuthorDTO.builder()
+                                                    .nickname(reply.getAuthor().getNickname())
+                                                    .nationality(reply.getAuthor().getNationality().name())
+                                                    .build();
+                                        }
+
+                                        boolean isMyReply = false;
+                                        if (userName != null && reply.getAuthor() != null) {
+                                            isMyReply = reply.getAuthor().getUsername().equals(userName);
+                                        }
+
+                                        return ReplyCommentDetailDTO.builder()
+                                                .replyCommentId(reply.getCommentReplyId()) // DTO 필드명에 맞게
+                                                .commentId(comment.getCommentId())
+                                                .author(replyAuthorDTO)
+                                                .body(reply.getContent())
+                                                .likeCount(reply.getLikes().size())
+                                                .anonymous(reply.isAnonymous())
+                                                .isMine(isMyReply)
+                                                .createdDate(reply.getCreatedAt())
+                                                .build();
+                                    })
+                                    .toList();
+
                             return CommentDetailDTO.builder()
                                     .commentId(comment.getCommentId())
                                     .author(commentAuthorDTO)
                                     .body(comment.getContent())
                                     .likeCount(comment.getLikes().size())
                                     .anonymous(comment.isAnonymous())
+                                    .isMine(isMyComment)
                                     .createdDate(comment.getCreatedAt())
+                                    .replies(repliesDTO)
                                     .build();
                         })
                         .toList())

@@ -4,5 +4,6 @@ package com.K_oin.Koin.EnumData;
 public enum BoardType {
     FREEBOARD,
     TRAVELBOARD,
-    LIFEBOARD
+    LIFEBOARD,
+    QurationBOARD
 }
