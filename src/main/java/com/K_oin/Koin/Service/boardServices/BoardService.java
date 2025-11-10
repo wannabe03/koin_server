@@ -119,8 +119,13 @@ public class BoardService {
         }
 
         boolean isMyBoard = false;
+        boolean isMyBoardLike = false;
+
         if (userName != null && board.getAuthor() != null) {
             isMyBoard = board.getAuthor().getUsername().equals(userName);
+
+            isMyBoardLike = board.getLikes().stream()
+                    .anyMatch(like -> like.getUser().getUsername().equals(userName));
         }
 
         return BoardDetailDTO.builder()
@@ -132,6 +137,7 @@ public class BoardService {
                 .likeCount(board.getLikes().size())
                 .anonymous(board.isAnonymous())
                 .isMine(isMyBoard)
+                .isMyLiked(isMyBoardLike)
                 .commentCount(board.getComments().size())
                 .comments(board.getComments().stream()
                         .map(comment -> {
@@ -146,8 +152,15 @@ public class BoardService {
                             }
 
                             boolean isMyComment = false;
+                            boolean isMyCommentLike = false;
+
                             if (userName != null && comment.getAuthor() != null) {
                                 isMyComment = comment.getAuthor().getUsername().equals(userName);
+                            }
+
+                            if (userName != null) {
+                                isMyCommentLike = comment.getLikes().stream()
+                                        .anyMatch(like -> like.getUser().getUsername().equals(userName));
                             }
 
                             List<ReplyCommentDetailDTO> repliesDTO = comment.getReplies().stream()
@@ -161,8 +174,15 @@ public class BoardService {
                                         }
 
                                         boolean isMyReply = false;
+                                        boolean isMyReplyLike = false;
+
                                         if (userName != null && reply.getAuthor() != null) {
                                             isMyReply = reply.getAuthor().getUsername().equals(userName);
+                                        }
+
+                                        if (userName != null) {
+                                            isMyReplyLike = reply.getLikes().stream()
+                                                    .anyMatch(like -> like.getUser().getUsername().equals(userName));
                                         }
 
                                         return ReplyCommentDetailDTO.builder()
@@ -173,6 +193,7 @@ public class BoardService {
                                                 .likeCount(reply.getLikes().size())
                                                 .anonymous(reply.isAnonymous())
                                                 .isMine(isMyReply)
+                                                .isMyLiked(isMyReplyLike)
                                                 .createdDate(reply.getCreatedAt())
                                                 .build();
                                     })
@@ -185,6 +206,7 @@ public class BoardService {
                                     .likeCount(comment.getLikes().size())
                                     .anonymous(comment.isAnonymous())
                                     .isMine(isMyComment)
+                                    .isMyLiked(isMyCommentLike)
                                     .createdDate(comment.getCreatedAt())
                                     .replies(repliesDTO)
                                     .build();

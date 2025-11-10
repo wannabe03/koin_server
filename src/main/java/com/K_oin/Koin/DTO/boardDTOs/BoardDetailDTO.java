@@ -21,4 +21,5 @@ public class BoardDetailDTO {
     private BoardAuthorDTO boardAuthorDTO;
     private List<CommentDetailDTO> comments; // 댓글 목록
     private boolean isMine;         // 내가 쓴 글인지 여부
+    private boolean isMyLiked;        // 내가 좋아요를 눌렀는지 여부
 }

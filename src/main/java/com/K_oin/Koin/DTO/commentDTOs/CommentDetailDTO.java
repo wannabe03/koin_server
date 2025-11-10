@@ -17,5 +17,6 @@ public class CommentDetailDTO {
     private String body;
     private int likeCount;
     private boolean isMine;
+    private boolean isMyLiked;
     private List<ReplyCommentDetailDTO> replies;
 }
