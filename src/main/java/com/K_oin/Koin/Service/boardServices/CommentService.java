@@ -31,6 +31,7 @@ public class CommentService {
     private final CommentReplyRepository commentReplyRepository;
     private final BoardCommentLikeRepository boardCommentLikeRepository;
     private final CommentReplyLikeRepository commentReplyLikeRepository;
+    private final AnonymousUserMappingRepository mappingRepository;
 
     public void createComment(CommentDTO commentDTO, String userName) {
         var user = userRepository.findByUsername(userName)
@@ -49,6 +50,21 @@ public class CommentService {
                     .createdAt(LocalDateTime.now())
                     .anonymous(commentDTO.isAnonymous()) // 기본값 설정, 필요에 따라 DTO에 추가 가능
                     .build();
+
+            if (commentDTO.isAnonymous()) {
+                AnonymousUserMapping mapping = mappingRepository.findByBoardIdAndUserId(
+                        board.getBoardId(), user.getId());
+
+                if (mapping == null)
+                {
+                    mapping = AnonymousUserMapping.builder()
+                            .boardId(board.getBoardId())
+                            .userId(user.getId())
+                            .anonymousNumber((mappingRepository.findMaxAnonymousNumberByBoardId(board.getBoardId()) + 1))
+                            .build();
+                    mappingRepository.save(mapping);
+                }
+            }
 
             commentRepository.save(comment);
             log.info("댓글 생성 성공 - boardId: {}, title: {}", board.getBoardId(), board.getTitle());
@@ -76,6 +92,21 @@ public class CommentService {
                     .createdAt(LocalDateTime.now())
                     .anonymous(replyCommentDTO.isAnonymous()) // 기본값 설정, 필요에 따라 DTO에 추가 가능
                     .build();
+
+            if (replyCommentDTO.isAnonymous()) {
+                AnonymousUserMapping mapping = mappingRepository.findByBoardIdAndUserId(
+                        boardComment.getBoard().getBoardId(), user.getId());
+
+                if (mapping == null)
+                {
+                    mapping = AnonymousUserMapping.builder()
+                            .boardId(boardComment.getBoard().getBoardId())
+                            .userId(user.getId())
+                            .anonymousNumber((mappingRepository.findMaxAnonymousNumberByBoardId(boardComment.getBoard().getBoardId()) + 1))
+                            .build();
+                    mappingRepository.save(mapping);
+                }
+            }
 
             commentReplyRepository.save(commentReply);
             log.info("대댓글 생성 성공 - commentId: {}, boardId: {}", boardComment.getCommentId(), boardComment.getBoard().getBoardId());

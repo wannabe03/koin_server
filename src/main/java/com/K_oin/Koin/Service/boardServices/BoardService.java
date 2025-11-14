@@ -6,9 +6,11 @@ import com.K_oin.Koin.DTO.boardDTOs.BoardSummaryDTO;
 import com.K_oin.Koin.DTO.commentDTOs.CommentDetailDTO;
 import com.K_oin.Koin.DTO.commentDTOs.ReplyCommentDetailDTO;
 import com.K_oin.Koin.DTO.userDTOs.BoardAuthorDTO;
+import com.K_oin.Koin.Entitiy.BoardEntity.AnonymousUserMapping;
 import com.K_oin.Koin.Entitiy.BoardEntity.Board;
 import com.K_oin.Koin.Entitiy.BoardEntity.Likes.BoardLike;
 import com.K_oin.Koin.EnumData.BoardType;
+import com.K_oin.Koin.Repository.boardRepository.AnonymousUserMappingRepository;
 import com.K_oin.Koin.Repository.boardRepository.Likes.BoardLikeRepository;
 import com.K_oin.Koin.Repository.boardRepository.BoardRepository;
 import com.K_oin.Koin.Repository.userRepository.UserRepository;
@@ -22,6 +24,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +36,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final BoardLikeRepository boardLikeRepository;
+    private final AnonymousUserMappingRepository mappingRepository;
 
     public List<BoardSummaryDTO> getBoardList(int page, int size, String sortBy, String boardType) {
         try {
@@ -59,6 +65,11 @@ public class BoardService {
                                     .nickname(board.getAuthor().getNickname())
                                     .nationality(board.getAuthor().getNationality().name())
                                     .build();
+                        }else {
+                            authorDTO = BoardAuthorDTO.builder()
+                                    .nickname("익명")
+                                    .nationality(null)
+                                    .build();
                         }
 
                         return BoardSummaryDTO.builder()
@@ -85,16 +96,30 @@ public class BoardService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userName));
 
         try {
+            // 게시글 생성
             Board board = Board.builder()
                     .title(boardDTO.getTitle())
                     .body(boardDTO.getBody())
                     .boardType(BoardType.valueOf(boardDTO.getBoardType().toUpperCase()))
                     .author(user)
                     .createdAt(LocalDateTime.now())
-                    .anonymous(boardDTO.isAnonymous()) // 기본값 설정, 필요에 따라 DTO에 추가 가능
+                    .anonymous(boardDTO.isAnonymous())
                     .build();
 
-            boardRepository.save(board);
+            // save 후 즉시 flush — boardId를 바로 사용 가능
+            boardRepository.saveAndFlush(board);
+
+            if (boardDTO.isAnonymous()) {
+                // 익명 매핑 등록
+                AnonymousUserMapping mapping = AnonymousUserMapping.builder()
+                        .userId(user.getId())
+                        .boardId(board.getBoardId())
+                        .anonymousNumber(0)
+                        .build();
+
+                mappingRepository.save(mapping);
+            }
+
             log.info("게시글 생성 성공 - boardId: {}, title: {}", board.getBoardId(), board.getTitle());
         } catch (Exception e) {
             log.error("게시글 생성 실패 - 사용자: {}, 오류: {}", userName, e.getMessage());
@@ -111,11 +136,21 @@ public class BoardService {
         Board board = boardRepository.findByBoardTypeAndBoardId(type, boardId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다."));
 
+        Map<Long, AnonymousUserMapping> anonymousMap = mappingRepository.findAllByBoardId(boardId).stream()
+                .collect(Collectors.toMap(AnonymousUserMapping::getUserId, mapping -> mapping));
+
         if (!board.isAnonymous()) {
             boardAuthorDTO = BoardAuthorDTO.builder()
                     .nickname(board.getAuthor().getNickname())
                     .nationality(board.getAuthor().getNationality().name())
                     .build();
+        }else{
+            AnonymousUserMapping mapping = anonymousMap.get(board.getAuthor().getId());
+            if (mapping != null) {
+                boardAuthorDTO = BoardAuthorDTO.builder()
+                        .nickname("익명" + mapping.getAnonymousNumber())
+                        .build();
+            }
         }
 
         boolean isMyBoard = false;
@@ -149,6 +184,15 @@ public class BoardService {
                                         .nickname(comment.getAuthor().getNickname())
                                         .nationality(comment.getAuthor().getNationality().name())
                                         .build();
+                            }else{
+                                AnonymousUserMapping mapping = anonymousMap.get(comment.getAuthor().getId());
+
+                                if (mapping != null) {
+                                    commentAuthorDTO = BoardAuthorDTO.builder()
+                                            .nickname("익명" + mapping.getAnonymousNumber())
+                                            .nationality(null)
+                                            .build();
+                                }
                             }
 
                             boolean isMyComment = false;
@@ -171,6 +215,17 @@ public class BoardService {
                                                     .nickname(reply.getAuthor().getNickname())
                                                     .nationality(reply.getAuthor().getNationality().name())
                                                     .build();
+                                        }
+                                        else if (reply.isAnonymous())
+                                        {
+                                            AnonymousUserMapping mapping = anonymousMap.get(reply.getAuthor().getId());
+
+                                            if (mapping != null) {
+                                                replyAuthorDTO = BoardAuthorDTO.builder()
+                                                        .nickname("익명" + mapping.getAnonymousNumber())
+                                                        .nationality(null)
+                                                        .build();
+                                            }
                                         }
 
                                         boolean isMyReply = false;
@@ -228,6 +283,7 @@ public class BoardService {
 
         try {
             boardRepository.delete(board);
+            mappingRepository.deleteByBoardId(board.getBoardId());
             log.info("게시글 삭제 성공 - boardId: {}, title: {}", board.getBoardId(), board.getTitle());
         } catch (Exception e) {
             log.error("게시글 삭제 실패 - 사용자: {}, 오류: {}", name, e.getMessage());
