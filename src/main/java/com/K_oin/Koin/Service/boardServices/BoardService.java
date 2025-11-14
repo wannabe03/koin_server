@@ -8,9 +8,11 @@ import com.K_oin.Koin.DTO.commentDTOs.ReplyCommentDetailDTO;
 import com.K_oin.Koin.DTO.userDTOs.BoardAuthorDTO;
 import com.K_oin.Koin.Entitiy.BoardEntity.AnonymousUserMapping;
 import com.K_oin.Koin.Entitiy.BoardEntity.Board;
+import com.K_oin.Koin.Entitiy.BoardEntity.BoardScraps;
 import com.K_oin.Koin.Entitiy.BoardEntity.Likes.BoardLike;
 import com.K_oin.Koin.EnumData.BoardType;
 import com.K_oin.Koin.Repository.boardRepository.AnonymousUserMappingRepository;
+import com.K_oin.Koin.Repository.boardRepository.BoardScrapRepository;
 import com.K_oin.Koin.Repository.boardRepository.Likes.BoardLikeRepository;
 import com.K_oin.Koin.Repository.boardRepository.BoardRepository;
 import com.K_oin.Koin.Repository.userRepository.UserRepository;
@@ -25,7 +27,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,6 +38,7 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final BoardLikeRepository boardLikeRepository;
     private final AnonymousUserMappingRepository mappingRepository;
+    private final BoardScrapRepository boardScrapRepository;
 
     public List<BoardSummaryDTO> getBoardList(int page, int size, String sortBy, String boardType) {
         try {
@@ -155,13 +157,20 @@ public class BoardService {
 
         boolean isMyBoard = false;
         boolean isMyBoardLike = false;
+        boolean isMyBoardScrap = false;
 
         if (userName != null && board.getAuthor() != null) {
             isMyBoard = board.getAuthor().getUsername().equals(userName);
 
             isMyBoardLike = board.getLikes().stream()
                     .anyMatch(like -> like.getUser().getUsername().equals(userName));
+
+            isMyBoardScrap = userRepository.findByUsername(userName)
+                    .map(user -> boardScrapRepository.findByUserAndBoard(user, board) != null)
+                    .orElse(false);
         }
+
+        long scrapCount = boardScrapRepository.countByBoard(board);
 
         return BoardDetailDTO.builder()
                 .boardId(board.getBoardId())
@@ -170,10 +179,12 @@ public class BoardService {
                 .boardAuthorDTO(boardAuthorDTO)
                 .createdAt(board.getCreatedAt())
                 .likeCount(board.getLikes().size())
+                .commentCount(board.getComments().size())
+                .scrapCount((int)scrapCount)
                 .anonymous(board.isAnonymous())
                 .isMine(isMyBoard)
                 .isMyLiked(isMyBoardLike)
-                .commentCount(board.getComments().size())
+                .isMyScraped(isMyBoardScrap)
                 .comments(board.getComments().stream()
                         .map(comment -> {
                             BoardAuthorDTO commentAuthorDTO = null;
@@ -283,7 +294,8 @@ public class BoardService {
 
         try {
             boardRepository.delete(board);
-            mappingRepository.deleteByBoardId(board.getBoardId());
+            boardScrapRepository.deleteByBoard_BoardId(boardId);
+            mappingRepository.deleteByBoardId(boardId);
             log.info("게시글 삭제 성공 - boardId: {}, title: {}", board.getBoardId(), board.getTitle());
         } catch (Exception e) {
             log.error("게시글 삭제 실패 - 사용자: {}, 오류: {}", name, e.getMessage());
@@ -317,6 +329,37 @@ public class BoardService {
             boardLikeRepository.save(newLike);
             message = "게시판 좋아요 성공";
             log.info("게시글 좋아요 추가 - boardId: {}, user: {}", boardId, userName);
+        }
+
+        return message;
+    }
+
+    public String scrapBoard(Long boardId, String userName) {
+        String message = "";
+
+        var user = userRepository.findByUsername(userName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userName));
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다."));
+
+        BoardScraps boardscraps = boardScrapRepository.findByUserAndBoard(user, board);
+
+        if (boardscraps != null) {
+            // 이미 스크랩를 눌렀다면 스크랩 취소
+            boardScrapRepository.delete(boardscraps);
+            message = "게시판 스크랩 취소 성공";
+            log.info("게시글 스크랩 취소 - boardId: {}, user: {}", boardId, userName);
+        } else {
+            // 스크랩 추가
+            BoardScraps boardScraps = BoardScraps.builder()
+                    .user(user)
+                    .board(board)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            boardScrapRepository.save(boardScraps);
+            message = "게시판 스크랩 성공";
+            log.info("게시글 스크랩 추가 - boardId: {}, user: {}", boardId, userName);
         }
 
         return message;

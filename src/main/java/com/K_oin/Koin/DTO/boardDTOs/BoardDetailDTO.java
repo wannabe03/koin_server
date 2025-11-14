@@ -18,8 +18,10 @@ public class BoardDetailDTO {
     private LocalDateTime createdAt; // 생성일
     private int likeCount;        // 좋아요 수
     private int commentCount;     // 댓글 수
+    private int scrapCount;      // 스크랩 수
     private boolean isMine;         // 내가 쓴 글인지 여부
     private boolean isMyLiked;        // 내가 좋아요를 눌렀는지 여부
+    private boolean isMyScraped;      // 내가 스크랩했는지 여부
     private BoardAuthorDTO boardAuthorDTO;
     private List<CommentDetailDTO> comments; // 댓글 목록
 }

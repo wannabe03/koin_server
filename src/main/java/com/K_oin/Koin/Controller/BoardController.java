@@ -73,6 +73,21 @@ public class BoardController {
         return ResponseEntity.ok(new ApiResponse<>(true, "게시판 번호: " + boardId, message));
     }
 
+    @PostMapping("/BoardScrap/{boardId}")
+    public ResponseEntity<ApiResponse<String>> scrapBoard(@PathVariable Long boardId, Authentication authentication) {
+
+        String message = "";
+
+        try {
+            message = boardService.scrapBoard(boardId, authentication.getName());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, "게시판 번호: " + boardId, "게시판 스크랩 기능 오류: " + e.getMessage()));
+        }
+
+        return ResponseEntity.ok(new ApiResponse<>(true, "게시판 번호: " + boardId, message));
+    }
+
     @GetMapping("/{boardType}/{boardId}")
     public ResponseEntity<ApiResponse<BoardDetailDTO>> getBoardType(@PathVariable String boardType, @PathVariable Long boardId, Authentication authentication) {
 
