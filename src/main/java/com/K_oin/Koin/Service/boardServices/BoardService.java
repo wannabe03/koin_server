@@ -8,23 +8,30 @@ import com.K_oin.Koin.DTO.commentDTOs.ReplyCommentDetailDTO;
 import com.K_oin.Koin.DTO.userDTOs.BoardAuthorDTO;
 import com.K_oin.Koin.Entitiy.BoardEntity.AnonymousUserMapping;
 import com.K_oin.Koin.Entitiy.BoardEntity.Board;
+import com.K_oin.Koin.Entitiy.BoardEntity.BoardImage;
 import com.K_oin.Koin.Entitiy.BoardEntity.BoardScraps;
 import com.K_oin.Koin.Entitiy.BoardEntity.Likes.BoardLike;
 import com.K_oin.Koin.EnumData.BoardType;
 import com.K_oin.Koin.Repository.boardRepository.AnonymousUserMappingRepository;
+import com.K_oin.Koin.Repository.boardRepository.BoardImageRepository;
 import com.K_oin.Koin.Repository.boardRepository.BoardScrapRepository;
 import com.K_oin.Koin.Repository.boardRepository.Likes.BoardLikeRepository;
 import com.K_oin.Koin.Repository.boardRepository.BoardRepository;
 import com.K_oin.Koin.Repository.userRepository.UserRepository;
+import com.K_oin.Koin.Service.awsService.S3Service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,6 +46,12 @@ public class BoardService {
     private final BoardLikeRepository boardLikeRepository;
     private final AnonymousUserMappingRepository mappingRepository;
     private final BoardScrapRepository boardScrapRepository;
+
+    //service method
+    private final S3Service s3Service;
+
+    @Value("${CLOUDFRONT_DOMAIN}") // CloudFront 도메인
+    private String cloudFrontDomain;
 
     public List<BoardSummaryDTO> getBoardList(int page, int size, String sortBy, String boardType) {
         try {
@@ -107,6 +120,57 @@ public class BoardService {
                     .createdAt(LocalDateTime.now())
                     .anonymous(boardDTO.isAnonymous())
                     .build();
+
+            // save 후 즉시 flush — boardId를 바로 사용 가능
+            boardRepository.saveAndFlush(board);
+
+            if (boardDTO.isAnonymous())
+            {
+                // 익명 매핑 등록
+                AnonymousUserMapping mapping = AnonymousUserMapping.builder()
+                        .userId(user.getId())
+                        .boardId(board.getBoardId())
+                        .anonymousNumber(0)
+                        .build();
+
+                mappingRepository.save(mapping);
+            }
+
+            log.info("게시글 생성 성공 - boardId: {}, title: {}", board.getBoardId(), board.getTitle());
+        } catch (Exception e) {
+            log.error("게시글 생성 실패 - 사용자: {}, 오류: {}", userName, e.getMessage());
+            throw new RuntimeException("게시글 생성 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
+    public void createCuration(BoardDTO boardDTO, String userName) {
+        var user = userRepository.findByUsername(userName)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userName));
+
+        try {
+            // 게시글 생성
+            Board board = Board.builder()
+                    .title(boardDTO.getTitle())
+                    .body(boardDTO.getBody())
+                    .boardType(BoardType.valueOf("CURATIONBOARD"))
+                    .author(user)
+                    .createdAt(LocalDateTime.now())
+                    .anonymous(boardDTO.isAnonymous())
+                    .build();
+
+            if (boardDTO.getImages() != null && !boardDTO.getImages().isEmpty()) {
+                int order = 0;
+                List<BoardImage> images = new ArrayList<>();
+                for (String url : boardDTO.getImages()) {
+                    BoardImage img = BoardImage.builder()
+                            .board(board)
+                            .imageUrl(cloudFrontDomain + "/" + url)
+                            .sortOrder(order++)
+                            .build();
+                    images.add(img);
+                }
+                board.setImages(images);
+            }
 
             // save 후 즉시 flush — boardId를 바로 사용 가능
             boardRepository.saveAndFlush(board);
@@ -185,6 +249,14 @@ public class BoardService {
                 .isMine(isMyBoard)
                 .isMyLiked(isMyBoardLike)
                 .isMyScraped(isMyBoardScrap)
+                .images(
+                        board.getImages().isEmpty()
+                                ? null
+                                : board.getImages().stream()
+                                .sorted(Comparator.comparingInt(BoardImage::getSortOrder))
+                                .map(BoardImage::getImageUrl)
+                                .toList()
+                )
                 .comments(board.getComments().stream()
                         .map(comment -> {
                             BoardAuthorDTO commentAuthorDTO = null;

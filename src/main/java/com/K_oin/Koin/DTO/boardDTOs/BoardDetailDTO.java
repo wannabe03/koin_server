@@ -23,5 +23,6 @@ public class BoardDetailDTO {
     private boolean isMyLiked;        // 내가 좋아요를 눌렀는지 여부
     private boolean isMyScraped;      // 내가 스크랩했는지 여부
     private BoardAuthorDTO boardAuthorDTO;
+    private List<String> images; // 이미지 URL 목록
     private List<CommentDetailDTO> comments; // 댓글 목록
 }

@@ -4,10 +4,12 @@ services:
   KoinServer_postgres:
     image: postgres:16.1
     container_name: postgres_db
+    env_file:
+      - KoinServer.env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: Koin
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "55432:5432"   # 호스트 포트 55432 → 컨테이너 내부 5432
     volumes:
@@ -19,10 +21,17 @@ services:
     container_name: app-koinServer
     depends_on:
       - KoinServer_postgres
+    env_file:
+      - KoinServer.env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://KoinServer_postgres:5432/Koin
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: yourpassword
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN}
     ports:
       - "8080:8080"
 

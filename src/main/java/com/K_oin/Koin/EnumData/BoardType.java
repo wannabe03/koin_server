@@ -5,5 +5,5 @@ public enum BoardType {
     FREEBOARD,
     TRAVELBOARD,
     LIFEBOARD,
-    QurationBOARD
+    CURATIONBOARD
 }

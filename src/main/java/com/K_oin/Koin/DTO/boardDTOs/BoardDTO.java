@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 @Schema(description = "게시글 생성 DTO")
@@ -20,4 +22,6 @@ public class BoardDTO {
 
     @Schema(description = "익명 여부", example = "false")
     private boolean anonymous;   // 익명 여부
+
+    private List<String> images;
 }

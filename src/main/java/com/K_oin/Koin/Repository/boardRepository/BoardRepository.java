@@ -37,7 +37,8 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
             "comments.likes",
             "comments.replies",
             "comments.replies.author",
-            "comments.replies.likes"
+            "comments.replies.likes",
+            "images"
     })
     Optional<Board> findByBoardTypeAndBoardId(BoardType boardType, Long boardId);
 
@@ -69,4 +70,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     ORDER BY b.created_at DESC
     """, nativeQuery = true)
     List<Board> findDistinctBoardsByMyLikeUserId(@Param("userId") Long userId);
+
+    @EntityGraph(attributePaths = {"images"})
+    Optional<Board> findByBoardId(Long boardId);
 }

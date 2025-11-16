@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -29,9 +30,12 @@ public class BoardController {
     ) {
         Page<BoardSummaryDTO> boardPage;
         List<BoardSummaryDTO> boardList;
-        try {
+        try
+        {
             boardList = boardService.getBoardList(page, size, sortBy, boardType);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, null, e.getMessage()));
         }
@@ -48,9 +52,12 @@ public class BoardController {
     @PostMapping("/createBoard") // 게시판 만들기
     public ResponseEntity<ApiResponse<BoardDTO>> createBoard(@RequestBody BoardDTO boardDTO, Authentication authentication) {
 
-        try {
-                boardService.createBoard(boardDTO, authentication.getName());
-        } catch (Exception e) {
+        try
+        {
+            boardService.createBoard(boardDTO, authentication.getName());
+        }
+        catch (Exception e)
+        {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, null, "게시글 생성 실패: " + e.getMessage()));
         }
@@ -58,14 +65,31 @@ public class BoardController {
         return ResponseEntity.ok(new ApiResponse<>(true, boardDTO, "게시글 생성 성공"));
     }
 
+    @PostMapping("/createCuration") // 게시판 만들기
+    public ResponseEntity<ApiResponse<BoardDTO>> createCuration(@RequestBody BoardDTO boardDTO, Authentication authentication) {
+
+        try
+        {
+            boardService.createCuration(boardDTO, authentication.getName());
+        } catch (Exception e)
+        {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, null, "큐레이션 게시글 생성 실패: " + e.getMessage()));
+        }
+
+        return ResponseEntity.ok(new ApiResponse<>(true, boardDTO, "큐레이션 게시글 생성 성공"));
+    }
+
     @PostMapping("/BoardLike/{boardId}")
     public ResponseEntity<ApiResponse<String>> likeBoard(@PathVariable Long boardId, Authentication authentication) {
 
         String message = "";
 
-        try {
+        try
+        {
            message = boardService.likeBoard(boardId, authentication.getName());
-        } catch (Exception e) {
+        } catch (Exception e)
+        {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, "게시판 번호: " + boardId, "게시판 좋아요 기능 오류: " + e.getMessage()));
         }
@@ -78,9 +102,11 @@ public class BoardController {
 
         String message = "";
 
-        try {
+        try
+        {
             message = boardService.scrapBoard(boardId, authentication.getName());
-        } catch (Exception e) {
+        } catch (Exception e)
+        {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, "게시판 번호: " + boardId, "게시판 스크랩 기능 오류: " + e.getMessage()));
         }
@@ -93,14 +119,18 @@ public class BoardController {
 
         BoardDetailDTO boardDetailDTO;
 
-        try {
+        try
+        {
             String currentUserId = null;
-            if (authentication != null && authentication.isAuthenticated()) {
+            if (authentication != null && authentication.isAuthenticated())
+            {
                 currentUserId = authentication.getName();
             }
 
             boardDetailDTO = boardService.getBoardDetail(boardType, boardId, currentUserId);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, null, "게시판 유형 조회 실패: " + e.getMessage()));
         }
@@ -110,9 +140,12 @@ public class BoardController {
 
     @DeleteMapping("delete/{boardId}")
     public ResponseEntity<ApiResponse<String>> deleteBoard(@PathVariable Long boardId, Authentication authentication) {
-        try {
+        try
+        {
             boardService.deleteBoard(boardId, authentication.getName());
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, "게시판 번호: " + boardId, "게시판 삭제 실패: " + e.getMessage()));
         }
